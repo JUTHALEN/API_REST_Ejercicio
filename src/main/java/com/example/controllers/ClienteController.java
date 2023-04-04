@@ -7,12 +7,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
@@ -30,14 +33,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entitites.Cliente;
+import com.example.entitites.FileUploadUtil;
 import com.example.entitites.Mascota;
+import com.example.model.FileUploadResponse;
 import com.example.services.ClienteService;
 import com.example.services.MascotaService;
-import com.example.utilities.FileUploadUtil;
+import com.example.utilities.FileDownloadUtil;
 
 import jakarta.validation.Valid;
-
-
 
 @RestController
 @RequestMapping("/clientes")
@@ -52,9 +55,12 @@ public class ClienteController {
     @Autowired
     private FileUploadUtil fileUploadUtil;
 
+    @Autowired
+    private FileDownloadUtil fileDownloadUtil;
+
     @GetMapping
     public ResponseEntity<List<Cliente>> findAll(@RequestParam(name = "page", required = false) Integer page,
-                                                @RequestParam(name = "size", required = false) Integer size) {
+            @RequestParam(name = "size", required = false) Integer size) {
 
         ResponseEntity<List<Cliente>> responseEntity = null;
         List<Cliente> clientes = new ArrayList<>();
@@ -67,10 +73,10 @@ public class ClienteController {
                 Page<Cliente> clientesPaginados = clienteService.findAll(pageable);
                 clientes = clientesPaginados.getContent();
                 responseEntity = new ResponseEntity<List<Cliente>>(clientes, HttpStatus.OK);
-            
+
             } catch (Exception e) {
                 responseEntity = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-             }
+            }
 
         } else {
             try {
@@ -79,9 +85,9 @@ public class ClienteController {
             } catch (Exception e) {
                 responseEntity = new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
-        }    
+        }
         return responseEntity;
-    }    
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> findById(@PathVariable(name = "id") Integer id) {
@@ -90,40 +96,34 @@ public class ClienteController {
 
         Map<String, Object> responseAsMap = new HashMap<>();
 
-
-
-
         try {
 
-            //Producto producto = productoService.findById(id);
+            // Producto producto = productoService.findById(id);
 
             Cliente cliente = clienteService.findById(id);
 
             if (cliente != null) {
-            String successMessage = "Se ha encontrado el cliente con id: " + id + " correctamente";
-            responseAsMap.put("mensaje", successMessage);
-            responseAsMap.put("cliente", cliente);
-//            responseAsMap.put("mascotas", cliente.getMascotas());
-            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
-            
-        } else {
+                String successMessage = "Se ha encontrado el cliente con id: " + id + " correctamente";
+                responseAsMap.put("mensaje", successMessage);
+                responseAsMap.put("cliente", cliente);
+                // responseAsMap.put("mascotas", cliente.getMascotas());
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
 
-            String errorMessage = "No se ha encontrado el cliente con id: " + id;
-            responseAsMap.put("error", errorMessage);
-            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.NOT_FOUND);
+            } else {
 
-        }
+                String errorMessage = "No se ha encontrado el cliente con id: " + id;
+                responseAsMap.put("error", errorMessage);
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.NOT_FOUND);
+
+            }
 
         } catch (Exception e) {
 
             String errorGrave = "Error grave";
             responseAsMap.put("error", errorGrave);
-            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
 
-          
         }
-
-
 
         return responseEntity;
     }
@@ -131,10 +131,9 @@ public class ClienteController {
     @PostMapping(consumes = "multipart/form-data")
     @Transactional
     public ResponseEntity<Map<String, Object>> insert(
-                            @Valid 
-                            @RequestPart(name = "cliente") Cliente cliente, 
-                            BindingResult result,
-                            @RequestPart (name = "file") MultipartFile file) throws IOException {
+            @Valid @RequestPart(name = "cliente") Cliente cliente,
+            BindingResult result,
+            @RequestPart(name = "file") MultipartFile file) throws IOException {
 
         Map<String, Object> responseAsMap = new HashMap<>();
         ResponseEntity<Map<String, Object>> responseEntity;
@@ -152,7 +151,21 @@ public class ClienteController {
         if (!file.isEmpty()) {
             String fileCode = fileUploadUtil.saveFile(file.getOriginalFilename(), file);
             cliente.setImagenCliente(fileCode + "-" + file.getOriginalFilename());
+
+            FileUploadResponse fileUploadResponse = FileUploadResponse.builder()
+                .fileName(fileCode + "-" + file.getOriginalFilename())
+                .downloadURI("/clientes/downloadFile/" + fileCode + "-"
+                        + file.getOriginalFilename())
+                .size(file.getSize())
+                .build();
+
+
+        responseAsMap.put("info de la imagen: ", fileUploadResponse);
+
+
         }
+
+
 
         Cliente clienteDB = clienteService.save(cliente);
 
@@ -162,7 +175,7 @@ public class ClienteController {
                 if (mascotas != null) {
                     for (Mascota mascota : mascotas) {
                         mascota.setCliente(clienteDB);
-                        mascotaService.save(mascota); 
+                        mascotaService.save(mascota);
                     }
                 }
 
@@ -189,50 +202,50 @@ public class ClienteController {
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<Map<String, Object>> update(@Valid @RequestBody Cliente cliente, BindingResult result,
-                                                      @PathVariable(name = "id") long id) {
+            @PathVariable(name = "id") long id) {
 
         Map<String, Object> responseAsMap = new HashMap<>();
 
         ResponseEntity<Map<String, Object>> responseEntity = null;
-        
+
         if (result.hasErrors()) {
-            List<String> errorMessages = new ArrayList<>(); 
+            List<String> errorMessages = new ArrayList<>();
             var prueba = result.getAllErrors();
             prueba.stream().forEach(e -> {
                 errorMessages.add(e.getDefaultMessage());
             });
 
             responseAsMap.put("errores", errorMessages);
-            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
             return responseEntity;
-         }
+        }
 
-         // Si no hay errores, entonces persistimos el producto. 
+        // Si no hay errores, entonces persistimos el producto.
         cliente.setId(id);
         Cliente clienteDB = clienteService.save(cliente);
 
         try {
             if (clienteDB != null) {
 
-                String mensaje = "El cliente se ha actualizado correctamente" ;
+                String mensaje = "El cliente se ha actualizado correctamente";
                 responseAsMap.put("mensaje", mensaje);
                 responseAsMap.put("cliente", clienteDB);
-                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.CREATED);
-    
-             } else {
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.CREATED);
 
-                String mensaje = "El cliente no se ha actualizado correctamente";    
+            } else {
+
+                String mensaje = "El cliente no se ha actualizado correctamente";
                 responseAsMap.put("mensaje", mensaje);
-                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST );
-    
-             }
-            
-         } catch (DataAccessException e) {
+                responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+
+            }
+
+        } catch (DataAccessException e) {
 
             String errorGrave = "Ha habido un error, el posible error es " + e.getMostSpecificCause();
-           responseAsMap.put("errorGrave", errorGrave);
-           responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
-        
+            responseAsMap.put("errorGrave", errorGrave);
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+
         }
 
         return responseEntity;
@@ -240,14 +253,13 @@ public class ClienteController {
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<String> delete(@Valid @RequestBody Cliente cliente, 
-                                         @PathVariable(name = "id") long id) {
-
+    public ResponseEntity<String> delete(@Valid @RequestBody Cliente cliente,
+            @PathVariable(name = "id") long id) {
 
         ResponseEntity<String> responseEntity = null;
-        try {          
+        try {
 
-            Cliente clienteDelete = clienteService.findById(id);       
+            Cliente clienteDelete = clienteService.findById(id);
             if (clienteDelete != null) {
                 clienteService.deleteById(id);
                 String mensajeOk = "Se ha borrado correctamente.";
@@ -256,16 +268,42 @@ public class ClienteController {
             } else {
                 String mensajeError = "No existe el cliente que quiere borrar.";
                 responseEntity = new ResponseEntity<String>(mensajeError, HttpStatus.NOT_FOUND);
-            }    
-            
+            }
+
         } catch (DataAccessException e) {
             e.getMostSpecificCause();
-            responseEntity = new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);            
+            responseEntity = new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-       
-    return responseEntity;
-        
+
+        return responseEntity;
+
     }
 
+    @GetMapping("/downloadFile/{fileCode}")
+
+    public ResponseEntity<?> downloadFile(@PathVariable(name = "fileCode") String fileCode) { // Devuelve un generico de
+                                                                                              // cualquier cosa
+        Resource resource = null; // EL objetivo es que me devuelva un recurso
+
+        try {
+            resource = fileDownloadUtil.getFileAsResource(fileCode);
+
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build(); 
+        }
+
+        if (resource == null) {
+            return new ResponseEntity<>("File not found ", HttpStatus.NOT_FOUND);
+        }
+
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType)) 
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue) 
+                .body(resource);
+
+    }
 
 }

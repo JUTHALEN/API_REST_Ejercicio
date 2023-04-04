@@ -1,4 +1,4 @@
-package com.example.utilities;
+package com.example.entitites;
 
 import java.io.IOException;
 import java.io.InputStream;
