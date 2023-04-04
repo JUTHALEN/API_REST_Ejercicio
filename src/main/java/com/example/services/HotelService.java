@@ -6,8 +6,8 @@ import com.example.entitites.Hotel;
 
 public interface HotelService {
     public List<Hotel> findAll();
-    public Hotel findById(Long id);
+    // public Hotel findById(long id);
     public Hotel save(Hotel hotel);
-    public void deleteById(Long id);
+    public void deleteById(long id);
     
 }

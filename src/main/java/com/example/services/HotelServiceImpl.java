@@ -17,10 +17,10 @@ public class HotelServiceImpl implements HotelService{
         return hotelDao.findAll();
     }
 
-    @Override
-    public Hotel findById(Long id) {
-        return hotelDao.findById(id).get();
-    }
+    // @Override
+    // public Hotel findById(long id) {
+    //     return hotelDao.findById(id);
+    // }
 
     @Override
     public Hotel save(Hotel hotel) {
@@ -28,7 +28,7 @@ public class HotelServiceImpl implements HotelService{
     }
 
     @Override
-    public void deleteById(Long id) {
+    public void deleteById(long id) {
         hotelDao.deleteById(id);
     }
     

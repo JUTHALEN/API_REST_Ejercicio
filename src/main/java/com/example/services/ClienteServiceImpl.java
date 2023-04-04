@@ -28,8 +28,8 @@ public class ClienteServiceImpl implements ClienteService{
     }
 
     @Override
-    public Cliente findById(Long id) {
-        return clienteDao.findById(id).get();
+    public Cliente findById(long id) {
+        return clienteDao.findById(id);
     }
 
     @Override
@@ -38,7 +38,7 @@ public class ClienteServiceImpl implements ClienteService{
     }
 
     @Override
-    public void deleteById(Long id) {
+    public void deleteById(long id) {
         clienteDao.deleteById(id);
     }
     

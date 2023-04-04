@@ -3,6 +3,10 @@ package com.example.entitites;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,6 +16,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +29,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Cliente {
     
     @Id
@@ -33,14 +40,19 @@ public class Cliente {
     @Size(min = 3, max = 25, message="El nombre tiene que tener entre 3 y 25 caracteres.")
     private String nombre;
     private String apellidos;
+
+    @PastOrPresent //Con PastOrPresent no te deja poner fechas nuevas a las de hoy, Past de ayer en atras
     private LocalDate fechaAlta;
 
-    //Relacion con la tabla mascota, un cliente puede tener varias mascotas
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST, mappedBy = "cliente")
-    private List<Mascota> mascotas;
+    @NotNull
+    private String imagenCliente;
 
-    //Relacion con hotel, un cliente solo puede tener mascotas en un hotel
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JsonManagedReference
     private Hotel hotel;
+
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST, mappedBy = "cliente")
+    //@JsonBackReference
+    private List<Mascota> mascotas;
 
 }

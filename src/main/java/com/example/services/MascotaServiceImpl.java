@@ -17,10 +17,10 @@ public class MascotaServiceImpl implements MascotaService {
         return mascotaDao.findAll();
     }
 
-    @Override
-    public Mascota findById(Long id) {
-        return mascotaDao.findById(id).get();
-    }
+    // @Override
+    // public Mascota findById(long id) {
+    //     return mascotaDao.findById(id);
+    // }
 
     @Override
     public Mascota save(Mascota mascota) {
@@ -28,7 +28,7 @@ public class MascotaServiceImpl implements MascotaService {
     }
 
     @Override
-    public void deleteById(Long id) {
+    public void deleteById(long id) {
         mascotaDao.deleteById(id);
     }
     
