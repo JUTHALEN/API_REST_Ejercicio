@@ -30,7 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entitites.Cliente;
+import com.example.entitites.Mascota;
 import com.example.services.ClienteService;
+import com.example.services.MascotaService;
 import com.example.utilities.FileUploadUtil;
 
 import jakarta.validation.Valid;
@@ -43,6 +45,9 @@ public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
+
+    @Autowired
+    private MascotaService mascotaService;
 
     @Autowired
     private FileUploadUtil fileUploadUtil;
@@ -132,54 +137,50 @@ public class ClienteController {
                             @RequestPart (name = "file") MultipartFile file) throws IOException {
 
         Map<String, Object> responseAsMap = new HashMap<>();
-        ResponseEntity<Map<String, Object>> responseEntity = null;
-        /** 
-         * Primero debemos comprobar si hay errores en el producto recibido. 
-         */
+        ResponseEntity<Map<String, Object>> responseEntity;
 
-         if (result.hasErrors()) {
+        if (result.hasErrors()) {
             List<String> errorMessages = new ArrayList<>();
-
-            for(ObjectError error : result.getAllErrors()) {
+            for (ObjectError error : result.getAllErrors()) {
                 errorMessages.add(error.getDefaultMessage());
-
             }
             responseAsMap.put("errores", errorMessages);
-            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+            responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.BAD_REQUEST);
             return responseEntity;
+        }
 
-         }
-         // Si no hay errores, entonces persistimos el producto. Comprobando previamente si nos han enviado una imagen o un archivo. 
+        if (!file.isEmpty()) {
+            String fileCode = fileUploadUtil.saveFile(file.getOriginalFilename(), file);
+            cliente.setImagenCliente(fileCode + "-" + file.getOriginalFilename());
+        }
 
-         if(!file.isEmpty()) {
-            String fileCode =  fileUploadUtil.saveFile(file.getOriginalFilename(), file);
-             cliente.setImagenCliente(fileCode+ "-" + file.getOriginalFilename());
-         }
+        Cliente clienteDB = clienteService.save(cliente);
 
-         Cliente clienteDB = clienteService.save(cliente);
-
-         try {
-
+        try {
             if (clienteDB != null) {
+                List<Mascota> mascotas = cliente.getMascotas();
+                if (mascotas != null) {
+                    for (Mascota mascota : mascotas) {
+                        mascota.setCliente(clienteDB);
+                        mascotaService.save(mascota); 
+                    }
+                }
 
-                String mensaje = "El cliente se ha creado correctamente" ;
+                String mensaje = "El cliente y sus mascotas se han creado correctamente";
                 responseAsMap.put("mensaje", mensaje);
                 responseAsMap.put("cliente", clienteDB);
-                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.CREATED);
-    
+                responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.CREATED);
+
             } else {
-
-                String errorMensaje = "El cliente no se ha creado correctamente" ;    
+                String errorMensaje = "El cliente no se ha creado correctamente";
                 responseAsMap.put("mensaje", errorMensaje);
-                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, 
-                                                            HttpStatus.INTERNAL_SERVER_ERROR );
+                responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            
-        } catch (DataAccessException e) {
 
-           String errorGrave = "Ha habido un fatal error, posible error  " + e.getMostSpecificCause();
-           responseAsMap.put("errorGrave", errorGrave);
-           responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);        
+        } catch (DataAccessException e) {
+            String errorGrave = "Ha habido un fatal error, posible error  " + e.getMostSpecificCause();
+            responseAsMap.put("errorGrave", errorGrave);
+            responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return responseEntity;

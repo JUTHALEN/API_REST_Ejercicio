@@ -48,11 +48,9 @@ public class Cliente {
     private String imagenCliente;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    @JsonManagedReference
     private Hotel hotel;
 
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST, mappedBy = "cliente")
-    //@JsonBackReference
     private List<Mascota> mascotas;
 
 }
